@@ -28,15 +28,18 @@
 
 <script setup>
 import { ref } from 'vue';
+import { useRouter } from 'vue-router';
 import AuthLayout from '@/components/auth/AuthLayout.vue';
 import BaseCard from '@/components/base/BaseCard.vue';
 import LoginForm from '@/components/auth/LoginForm.vue';
 import RegisterForm from '@/components/auth/RegisterForm.vue';
 
+const router = useRouter();
 const activeTab = ref('login');
 
 const handleSuccess = () => {
-  console.log('Autenticación exitosa');
+  // Redirect to dashboard after successful login/register
+  router.push('/dashboard');
 };
 </script>
 

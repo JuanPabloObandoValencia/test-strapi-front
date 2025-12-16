@@ -2,9 +2,31 @@
   <div class="dashboard-view">
     <div class="dashboard-view__header">
       <h1 class="dashboard-view__title">Dashboard</h1>
-      <BaseButton variant="danger" @click="handleLogout">
-        Cerrar Sesión
-      </BaseButton>
+      <div class="dashboard-view__actions">
+        <router-link to="/posts/create" custom v-slot="{ navigate }">
+          <BaseButton variant="success" @click="navigate">
+            ✏️ Crear Post
+          </BaseButton>
+        </router-link>
+        <router-link to="/profile" custom v-slot="{ navigate }">
+          <BaseButton variant="primary" @click="navigate">
+            👤 Ver Perfil
+          </BaseButton>
+        </router-link>
+        <router-link to="/posts" custom v-slot="{ navigate }">
+          <BaseButton variant="primary" @click="navigate">
+            📰 Ver Posts
+          </BaseButton>
+        </router-link>
+        <router-link to="/docs" custom v-slot="{ navigate }">
+          <BaseButton variant="primary" @click="navigate">
+            📚 Documentación
+          </BaseButton>
+        </router-link>
+        <BaseButton variant="danger" @click="handleLogout">
+          Cerrar Sesión
+        </BaseButton>
+      </div>
     </div>
 
     <div class="dashboard-view__content">
@@ -29,6 +51,14 @@
             <div class="dashboard-view__detail">
               <span class="dashboard-view__label">ID:</span>
               <span class="dashboard-view__value">{{ user.id }}</span>
+            </div>
+            <div class="dashboard-view__detail">
+              <span class="dashboard-view__label">Biografía:</span>
+              <span class="dashboard-view__value">{{ user.profile?.biography }}</span>
+            </div>
+            <div class="dashboard-view__detail">
+              <span class="dashboard-view__label">Teléfono:</span>
+              <span class="dashboard-view__value">{{ user.profile?.phone }}</span>
             </div>
           </div>
         </div>
@@ -74,7 +104,7 @@ import BaseCard from '@/components/base/BaseCard.vue';
 import BaseButton from '@/components/base/BaseButton.vue';
 import LoadingSpinner from '@/components/base/LoadingSpinner.vue';
 
-const { user, logout } = useStrapiAuth();
+const { user, profile, logout } = useStrapiAuth();
 
 const handleLogout = () => {
   logout();
@@ -108,6 +138,11 @@ const handleLogout = () => {
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
+}
+
+.dashboard-view__actions {
+  display: flex;
+  gap: 1rem;
 }
 
 .dashboard-view__content {

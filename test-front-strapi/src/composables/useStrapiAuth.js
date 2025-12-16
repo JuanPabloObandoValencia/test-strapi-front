@@ -1,16 +1,17 @@
 import { ref, computed } from "vue";
 import { login as apiLogin, register as apiRegister, logout as apiLogout, getCurrentUser, isAuthenticated as checkAuth } from "@/services/strapiService";
 
+// Shared state (singleton pattern) - all instances share the same reactive state
+const user = ref(getCurrentUser());
+const isAuthenticated = ref(checkAuth());
+const loading = ref(false);
+const error = ref(null);
+
 /**
  * Composable para manejo de autenticación con Strapi
  * @returns {Object} Funciones y estado de autenticación
  */
 export function useStrapiAuth() {
-    const user = ref(getCurrentUser());
-    const isAuthenticated = ref(checkAuth());
-    const loading = ref(false);
-    const error = ref(null);
-
     /**
      * Iniciar sesión
      * @param {string} identifier - Email o username

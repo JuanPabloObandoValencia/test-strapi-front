@@ -163,6 +163,190 @@ export const deleteFile = async (id) => {
     return response.data;
 };
 
+/**
+ * Obtener perfil de usuario
+ * @param {number|string} userId - ID del usuario
+ * @returns {Promise} Perfil del usuario
+ */
+export const getProfile = async (userId) => {
+    try {
+        const response = await api.get("/profiles", {
+            params: {
+                filters: {
+                    users_permissions_user: { id: { $eq: userId } }
+                },
+                populate: {
+                    avatar: "*",
+                    users_permissions_user: "*",
+                    post: "*"   // opcional si quieres el post relacionado
+                }
+            }
+        });
+
+        return response.data;
+
+    } catch (err) {
+        console.log("STRAPI ERROR DETAILS:", err.response?.data?.error?.details);
+        console.log("STRAPI ERROR MESSAGE:", err.response?.data?.error?.message);
+        throw err;
+    }
+};
+
+/**
+ * Crear perfil de usuario
+ * @param {number|string} userId - ID del usuario
+ * @param {Object} profileData - Datos del perfil (biography, phone)
+ * @returns {Promise} Perfil creado
+ */
+export const createProfile = async (userId, profileData) => {
+    const response = await api.post("/profiles", {
+        data: {
+            ...profileData,
+            users_permissions_user: userId
+        }
+    });
+    return response.data;
+};
+
+/**
+ * Actualizar perfil de usuario
+ * @param {number|string} profileId - ID del perfil
+ * @param {Object} profileData - Datos a actualizar
+ * @returns {Promise} Perfil actualizado
+ */
+export const updateProfile = async (profileId, profileData) => {
+    const response = await api.put(`/profiles/${profileId}`, {
+        data: profileData
+    });
+    return response.data;
+};
+
+/**
+ * Subir avatar para el perfil
+ * @param {File} file - Archivo de imagen
+ * @param {number|string} profileId - ID del perfil
+ * @returns {Promise} Avatar subido
+ */
+export const uploadAvatar = async (file, profileId) => {
+    const formData = new FormData();
+    formData.append("files", file);
+    formData.append("ref", "api::profile.profile");
+    formData.append("refId", profileId);
+    formData.append("field", "avatar");
+
+    const response = await api.post("/upload", formData, {
+        headers: {
+            "Content-Type": "multipart/form-data",
+        },
+    });
+    return response.data;
+};
+
+// ==================== POSTS ====================
+
+/**
+ * Obtener todos los posts
+ * @param {Object} params - Parámetros de query (filters, sort, pagination)
+ * @returns {Promise} Lista de posts
+ */
+export const getPosts = async (params = {}) => {
+    const response = await api.get("/posts", {
+        params: {
+            populate: {
+                profile: "*",
+                category: "*"
+            },
+            ...params
+        }
+    });
+    return response.data;
+};
+
+/**
+ * Obtener un post por ID
+ * @param {number|string} id - ID del post
+ * @returns {Promise} Post
+ */
+export const getPostById = async (id) => {
+    const response = await api.get(`/posts/${id}`, {
+        params: {
+            populate: {
+                profile: { populate: ['avatar'] },
+                category: "*",
+                tags: "*",
+                cover_image: "*",
+                seo: "*"
+            }
+        }
+    });
+    return response.data;
+};
+
+/**
+ * Obtener un post por Slug
+ * @param {string} slug - Slug del post
+ * @returns {Promise} Post
+ */
+export const getPostBySlug = async (slug) => {
+    const response = await api.get("/posts", {
+        params: {
+            filters: {
+                slug: {
+                    $eq: slug
+                }
+            },
+            populate: {
+                profile: {
+                    populate: {
+                        avatar: true
+                    }
+                },
+                category: true,
+                tags: true,
+                cover_image: true,
+                seo: true
+            }
+        }
+    });
+    return response.data;
+};
+
+
+/**
+ * Crear un nuevo post
+ * @param {Object} postData - Datos del post (tittle, content, published_date, profile, category)
+ * @returns {Promise} Post creado
+ */
+export const createPost = async (postData) => {
+    const response = await api.post("/posts", {
+        data: postData
+    });
+    return response.data;
+};
+
+/**
+ * Actualizar un post
+ * @param {number|string} id - ID del post
+ * @param {Object} postData - Datos a actualizar
+ * @returns {Promise} Post actualizado
+ */
+export const updatePost = async (id, postData) => {
+    const response = await api.put(`/posts/${id}`, {
+        data: postData
+    });
+    return response.data;
+};
+
+/**
+ * Eliminar un post
+ * @param {number|string} id - ID del post
+ * @returns {Promise} Post eliminado
+ */
+export const deletePost = async (id) => {
+    const response = await api.delete(`/posts/${id}`);
+    return response.data;
+};
+
 // ==================== UTILIDADES ====================
 
 /**
@@ -188,18 +372,29 @@ export const extractStrapiData = (response) => {
 
     // Si es un array de elementos
     if (response.data && Array.isArray(response.data)) {
-        return response.data.map(item => ({
-            id: item.id,
-            ...item.attributes
-        }));
+        return response.data.map(item => {
+            if (item.attributes) {
+                return {
+                    id: item.id,
+                    ...item.attributes
+                };
+            }
+            return item;
+        });
     }
 
     // Si es un solo elemento
-    if (response.data && response.data.attributes) {
-        return {
-            id: response.data.id,
-            ...response.data.attributes
-        };
+    if (response.data) {
+        if (response.data.attributes) {
+            return {
+                id: response.data.id,
+                ...response.data.attributes
+            };
+        }
+        // Check if it's a flat object (Strapi v5 or other)
+        // But be careful not to return the whole response object if it's not what we expect
+        // Usually single item response.data is the item object itself
+        return response.data;
     }
 
     return response.data || response;
@@ -222,6 +417,18 @@ export default {
     uploadFile,
     getFiles,
     deleteFile,
+    // Profile
+    getProfile,
+    createProfile,
+    updateProfile,
+    uploadAvatar,
+    // Posts
+    getPosts,
+    getPostById,
+    createPost,
+    updatePost,
+    deletePost,
+    getPostBySlug,
     // Utils
     getStrapiURL,
     extractStrapiData,

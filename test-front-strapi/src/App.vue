@@ -1,20 +1,11 @@
 <script setup>
-import { computed } from 'vue';
-import { useStrapiAuth } from '@/composables/useStrapiAuth';
-import LoginView from '@/views/LoginView.vue';
-import DashboardView from '@/views/DashboardView.vue';
-
-const { isAuthenticated } = useStrapiAuth();
-
-const currentView = computed(() => {
-  return isAuthenticated.value ? DashboardView : LoginView;
-});
+// App now uses Vue Router for navigation
 </script>
 
 <template>
   <div id="app">
     <transition name="view-fade" mode="out-in">
-      <component :is="currentView" />
+      <router-view />
     </transition>
   </div>
 </template>
