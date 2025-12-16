@@ -245,6 +245,24 @@ export const uploadAvatar = async (file, profileId) => {
 // ==================== POSTS ====================
 
 /**
+ * Obtener todas las categorías
+ * @returns {Promise} Lista de categorías
+ */
+export const getCategories = async () => {
+    const response = await api.get("/categories");
+    return response.data;
+};
+
+/**
+ * Obtener todos los tags
+ * @returns {Promise} Lista de tags
+ */
+export const getTags = async () => {
+    const response = await api.get("/tags");
+    return response.data;
+};
+
+/**
  * Obtener todos los posts
  * @param {Object} params - Parámetros de query (filters, sort, pagination)
  * @returns {Promise} Lista de posts
@@ -429,6 +447,8 @@ export default {
     updatePost,
     deletePost,
     getPostBySlug,
+    getCategories,
+    getTags,
     // Utils
     getStrapiURL,
     extractStrapiData,

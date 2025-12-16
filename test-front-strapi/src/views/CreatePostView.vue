@@ -30,6 +30,76 @@
             />
           </div>
 
+
+
+          <div class="create-post-form__field">
+            <label for="summary" class="create-post-form__label">
+              Resumen
+            </label>
+             <textarea
+              id="summary"
+              v-model="formData.summary"
+              class="create-post-form__textarea"
+              placeholder="Breve descripción del artículo..."
+              rows="3"
+              :disabled="loading"
+            ></textarea>
+          </div>
+
+          <div class="create-post-form__field">
+            <label for="cover_image" class="create-post-form__label">
+               Imagen de Portada
+            </label>
+            <div class="cover-image-upload">
+                <input type="file" @change="handleFileChange" accept="image/*" />
+                <div v-if="coverImagePreview" class="preview-container">
+                    <img :src="coverImagePreview" alt="Preview" />
+                    <button type="button" @click="removeCoverImage">Escoger otra</button>
+                </div>
+            </div>
+          </div>
+
+          <div class="create-post-form__row">
+             <div class="create-post-form__field">
+                <label for="category" class="create-post-form__label">Categoría</label>
+                <select id="category" v-model="formData.category" class="create-post-form__select">
+                   <option :value="null">Seleccionar...</option>
+                   <option v-for="cat in categories" :key="cat.id" :value="cat.id">
+                      {{ cat.attributes?.name || cat.name }}
+                   </option>
+                </select>
+             </div>
+             
+             <div class="create-post-form__field">
+                <label for="reading_time" class="create-post-form__label">Tiempo Lectura (min)</label>
+                <input 
+                  type="number" 
+                  id="reading_time" 
+                  v-model="formData.reading_time" 
+                  class="create-post-form__input"
+                  min="1" />
+             </div>
+          </div>
+
+          <div class="create-post-form__field">
+            <label class="create-post-form__label">
+               Etiquetas
+            </label>
+            <div class="tags-checkboxes">
+               <label v-for="tag in tags" :key="tag.id" class="tag-check">
+                  <input type="checkbox" :value="tag.id" v-model="formData.tags">
+                  {{ tag.attributes?.name || tag.name }}
+               </label>
+            </div>
+          </div>
+
+          <div class="create-post-form__field checkbox-field">
+             <label class="checkbox-label">
+                <input type="checkbox" v-model="formData.is_featured">
+                Destacar este post
+             </label>
+          </div>
+
           <div class="create-post-form__field">
             <label for="content" class="create-post-form__label">
               Contenido <span class="create-post-form__required">*</span>
@@ -99,7 +169,7 @@
 <script setup>
 import { ref } from 'vue';
 import { useRouter } from 'vue-router';
-import { createPost } from '@/services/strapiService';
+import { createPost, getCategories, getTags, uploadFile, extractStrapiData } from '@/services/strapiService';
 import { useStrapiAuth } from '@/composables/useStrapiAuth';
 import { useStrapiProfile } from '@/composables/useStrapiProfile';
 import BaseCard from '@/components/base/BaseCard.vue';
@@ -115,20 +185,55 @@ const loading = ref(false);
 const error = ref('');
 const successMessage = ref('');
 
+const categories = ref([]);
+const tags = ref([]);
+const coverImageFile = ref(null);
+const coverImagePreview = ref('');
+
 
 // Initialize form with current datetime
 const now = new Date();
 now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
 const formData = ref({
   title: '',
+  summary: '',
   content: '',
-  published_date: now.toISOString().slice(0, 16)
+  published_date: now.toISOString().slice(0, 16),
+  reading_time: null,
+  is_featured: false,
+  category: null,
+  tags: []
 });
 
-// Load user profile on mount
-if (user.value?.id && !profile.value) {
-  loadProfile(user.value.id);
-}
+// Load resources on mount
+const init = async () => {
+    try {
+        if (user.value?.id && !profile.value) {
+           await loadProfile(user.value.id);
+        }
+        
+        const [catsRes, tagsRes] = await Promise.all([getCategories(), getTags()]);
+        categories.value = extractStrapiData(catsRes) || [];
+        tags.value = extractStrapiData(tagsRes) || [];
+        
+    } catch (e) {
+        console.error("Error loading form data", e);
+    }
+};
+init();
+
+const handleFileChange = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+        coverImageFile.value = file;
+        coverImagePreview.value = URL.createObjectURL(file);
+    }
+};
+
+const removeCoverImage = () => {
+    coverImageFile.value = null;
+    coverImagePreview.value = '';
+};
 
 const handleSubmit = async () => {
   error.value = '';
@@ -157,13 +262,28 @@ const handleSubmit = async () => {
     const postData = {
       title: formData.value.title,
       slug: generateSlug(formData.value.title),
+      summary: formData.value.summary,
       content: formData.value.content,
       published_date: formData.value.published_date,
+      reading_time: formData.value.reading_time,
+      is_featured: formData.value.is_featured,
+      // category: formData.value.category,
+      // tags: formData.value.tags
     };
 
     // Add profile relation if available
-    if (profile.value?.id) {
-      postData.profile = profile.value.id;
+    // if (profile.value?.id) {
+    //   postData.profile = profile.value.id;
+    // }
+
+    // Handle Cover Image Upload
+    if (coverImageFile.value) {
+       const uploadedFiles = await uploadFile(coverImageFile.value);
+       // Check if response is array or single object
+       const uploadedFile = Array.isArray(uploadedFiles) ? uploadedFiles[0] : uploadedFiles;
+       if (uploadedFile && uploadedFile.id) {
+           postData.cover_image = uploadedFile.id;
+       }
     }
 
     // Create the post
@@ -346,4 +466,60 @@ const handleSubmit = async () => {
 }
 
 
+</style>
+
+<style scoped>
+/* Additional specific styles for new fields */
+.create-post-form__row {
+   display: flex;
+   gap: 1rem;
+}
+.create-post-form__row > * {
+   flex: 1;
+}
+.create-post-form__select, .create-post-form__input {
+  width: 100%;
+  padding: 0.75rem 1rem;
+  border: 2px solid #e2e8f0;
+  border-radius: 8px;
+  font-size: 1rem;
+  background: white;
+}
+.cover-image-upload {
+   margin-top: 0.5rem;
+}
+.preview-container {
+   margin-top: 1rem;
+   width: 200px;
+}
+.preview-container img {
+   width: 100%;
+   border-radius: 8px;
+   display: block;
+   margin-bottom: 0.5rem;
+}
+.tags-checkboxes {
+   display: flex;
+   flex-wrap: wrap;
+   gap: 1rem;
+   padding: 0.5rem;
+   background: #f7fafc;
+   border-radius: 8px;
+}
+.tag-check {
+   display: flex;
+   align-items: center;
+   gap: 0.5rem;
+   cursor: pointer;
+}
+.checkbox-field {
+   margin-top: 0.5rem;
+}
+.checkbox-label {
+   display: flex;
+   align-items: center;
+   gap: 0.5rem;
+   font-weight: 600;
+   cursor: pointer;
+}
 </style>
